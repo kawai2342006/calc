@@ -3,263 +3,492 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>智慧百分比與加倉計算器</title>
+  <title>LOKI 智慧百分比與加倉風控計算器</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Fonts: Cinzel Decorative / Outfit / JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800;900&family=JetBrains+Mono:wght@400;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            title: ['Cinzel', 'serif'],
+            sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+            mono: ['"JetBrains Mono"', 'monospace'],
+          },
+          colors: {
+            loki: {
+              void: '#040806',
+              abyss: '#07100b',
+              surface: '#0b1912',
+              card: '#0f2219',
+              gold: '#d4af37',
+              goldBright: '#f3d36b',
+              goldDim: '#8b7224',
+              emerald: '#10b981',
+              emeraldLight: '#34d399',
+              emeraldGlow: '#059669',
+              emeraldDark: '#043422',
+              bronze: '#785b24',
+              timeBorder: 'rgba(212, 175, 55, 0.22)',
+            }
+          },
+          boxShadow: {
+            'loki-gold': '0 0 25px -4px rgba(212, 175, 55, 0.25)',
+            'loki-emerald': '0 0 30px -5px rgba(16, 185, 129, 0.3)',
+            'inner-glow': 'inset 0 1px 0 0 rgba(212, 175, 55, 0.2)',
+          }
+        }
+      }
+    }
+  </script>
   <style>
-    body { font-family: system-ui, sans-serif; padding: 2rem; max-width: 480px; margin: auto; background-color: #f8fafc; }
-    .card { background: #fff; border: 1px solid #e2e8f0; padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.06); margin-bottom: 2rem; }
-    .input-group { margin-bottom: 1.1rem; }
-    label { display: block; margin-bottom: 0.35rem; font-weight: 600; color: #334155; font-size: 0.95rem; }
-    input { width: 100%; padding: 0.6rem; box-sizing: border-box; font-size: 1rem; border: 1px solid #cbd5e1; border-radius: 6px; }
-    input.auto-calculated { background-color: #f0fdf4; border-color: #22c55e; }
-    input[readonly] { background-color: #f1f5f9; color: #1e293b; font-weight: 600; cursor: not-allowed; border-color: #e2e8f0; }
-    .status { font-size: 0.85rem; color: #64748b; margin-top: 0.8rem; }
-    .divider { height: 1px; background-color: #e2e8f0; margin: 1.3rem 0; }
-    .badge { display: inline-block; padding: 0.2rem 0.5rem; font-size: 0.75rem; border-radius: 4px; background: #e0f2fe; color: #0369a1; font-weight: 700; margin-bottom: 0.5rem; }
-    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem; }
+    body {
+      background-color: #040806;
+      color: #e2e8f0;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background-image: 
+        radial-gradient(circle at 50% 0%, rgba(16, 185, 129, 0.12) 0%, transparent 55%),
+        radial-gradient(circle at 100% 70%, rgba(212, 175, 55, 0.08) 0%, transparent 45%),
+        radial-gradient(circle at 0% 90%, rgba(5, 150, 105, 0.08) 0%, transparent 50%);
+      background-attachment: fixed;
+    }
+
+    /* Loki Custom Glowing Borders */
+    .loki-card {
+      background: linear-gradient(165deg, rgba(15, 34, 25, 0.94) 0%, rgba(7, 16, 11, 0.96) 100%);
+      border: 1px solid rgba(212, 175, 55, 0.25);
+      position: relative;
+    }
+    .loki-card::before {
+      content: '';
+      position: absolute;
+      inset: -1px;
+      border-radius: inherit;
+      padding: 1px;
+      background: linear-gradient(135deg, rgba(243, 211, 107, 0.4), transparent 45%, rgba(16, 185, 129, 0.35));
+      -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+      -webkit-mask-composite: xor;
+      mask-composite: exclude;
+      pointer-events: none;
+    }
+
+    /* Inputs styling */
+    input[type=number]::-webkit-inner-spin-button, 
+    input[type=number]::-webkit-outer-spin-button { 
+      -webkit-appearance: none; 
+      margin: 0; 
+    }
+    input[type=number] { -moz-appearance: textfield; }
+
+    .loki-input {
+      background: rgba(4, 10, 7, 0.85);
+      border: 1px solid rgba(212, 175, 55, 0.3);
+      color: #f1f5f9;
+      transition: all 0.25s ease;
+    }
+    .loki-input:focus {
+      outline: none;
+      border-color: #f3d36b;
+      box-shadow: 0 0 16px rgba(212, 175, 55, 0.35), inset 0 0 8px rgba(16, 185, 129, 0.15);
+    }
+
+    /* Auto Calculated Highlight */
+    .auto-calculated {
+      background: rgba(16, 185, 129, 0.12) !important;
+      border-color: #34d399 !important;
+      color: #6ee7b7 !important;
+      box-shadow: 0 0 14px rgba(52, 211, 153, 0.3) !important;
+    }
+
+    /* Readonly inputs */
+    .loki-readonly {
+      background: rgba(5, 12, 9, 0.92);
+      border-color: rgba(212, 175, 55, 0.2);
+      cursor: not-allowed;
+    }
+
+    /* Custom divider line */
+    .rune-divider {
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(212, 175, 55, 0.6), rgba(16, 185, 129, 0.6), transparent);
+    }
   </style>
 </head>
-<body>
+<body class="min-h-screen py-8 px-4 sm:px-6 flex flex-col justify-between selection:bg-loki-emerald selection:text-loki-void">
 
-<!-- 第一部分：原本的三向百分比計算器 -->
-<div class="card">
-  <h2>智慧百分比變量計算器</h2>
-  
-  <div class="input-group">
-    <label for="v1">初始值 (Initial Value)</label>
-    <input type="number" id="v1" step="any" placeholder="請輸入數值">
-  </div>
+  <main class="max-w-xl mx-auto w-full space-y-7">
+    <!-- Header: God of Stories & TVA Theme -->
+    <header class="text-center relative pt-2 pb-1">
+      <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-loki-gold/40 bg-loki-abyss/80 shadow-loki-gold mb-3">
+        <span class="w-2 h-2 rounded-full bg-loki-emerald animate-ping"></span>
+        <span class="text-[11px] font-mono tracking-widest text-loki-goldBright uppercase font-semibold">TVA Temporal Risk Terminal</span>
+      </div>
 
-  <div class="input-group">
-    <label for="v2">最終值 (Final Value)</label>
-    <input type="number" id="v2" step="any" placeholder="請輸入數值">
-  </div>
+      <h1 class="text-3xl sm:text-4xl font-extrabold tracking-wider font-title text-transparent bg-clip-text bg-gradient-to-r from-loki-goldBright via-yellow-100 to-loki-gold">
+        GLORIOUS PURPOSE
+      </h1>
+      <p class="text-xs sm:text-sm text-emerald-400/90 font-mono tracking-wide mt-1.5 flex items-center justify-center gap-1.5">
+        <span>⚔️</span> 智慧百分比變量 <span>&bull;</span> Qullamaggie 倉位加倉模型
+      </p>
+    </header>
 
-  <div class="input-group">
-    <label for="pct">變更百分比 (Percent Change %)</label>
-    <input type="number" id="pct" step="any" placeholder="請輸入百分比">
-  </div>
+    <section class="loki-card rounded-2xl p-5 sm:p-7 shadow-loki-emerald backdrop-blur-xl">
+      <!-- Section Title -->
+      <div class="flex items-center justify-between pb-3 mb-5 border-b border-loki-gold/25">
+        <div class="flex items-center gap-2.5">
+          <div class="w-8 h-8 rounded-lg bg-loki-emeraldDark flex items-center justify-center border border-loki-emerald/40 text-loki-gold">
+            <svg class="w-4 h-4 text-loki-goldBright" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z"/>
+            </svg>
+          </div>
+          <div>
+            <h2 class="text-base font-bold text-white font-title tracking-wide">智慧百分比變量推算</h2>
+            <p class="text-[11px] text-slate-400 font-mono">任填 2 項自動求解第 3 項</p>
+          </div>
+        </div>
+        <span class="text-[10px] font-mono uppercase bg-loki-abyss border border-loki-gold/30 px-2 py-0.5 rounded text-loki-goldBright">PART I</span>
+      </div>
 
-  <div class="divider"></div>
+      <!-- Inputs for Part 1 -->
+      <div class="space-y-4">
+        <!-- V1 -->
+        <div>
+          <label for="v1" class="flex justify-between items-center text-xs font-semibold text-slate-300 mb-1.5">
+            <span>初始值 (Initial Value)</span>
+            <span class="text-[11px] font-mono text-loki-goldDim">V1</span>
+          </label>
+          <input type="number" id="v1" step="any" placeholder="請輸入數值"
+            class="loki-input w-full px-3.5 py-2.5 rounded-xl font-mono text-sm sm:text-base focus:ring-1 focus:ring-loki-gold transition">
+        </div>
 
-  <div class="input-group">
-    <label for="maxPos">最大倉位佔比 (Max Position%) [-1%Total]</label>
-    <input type="text" id="maxPos" placeholder="自動計算" readonly>
-  </div>
+        <!-- V2 -->
+        <div>
+          <label for="v2" class="flex justify-between items-center text-xs font-semibold text-slate-300 mb-1.5">
+            <span>最終值 (Final Value)</span>
+            <span class="text-[11px] font-mono text-loki-goldDim">V2</span>
+          </label>
+          <input type="number" id="v2" step="any" placeholder="請輸入數值)"
+            class="loki-input w-full px-3.5 py-2.5 rounded-xl font-mono text-sm sm:text-base focus:ring-1 focus:ring-loki-gold transition">
+        </div>
 
-  <div class="status" id="statusText">請輸入任意 2 個數值來計算第 3 個數值。</div>
-</div>
+        <!-- PCT -->
+        <div>
+          <label for="pct" class="flex justify-between items-center text-xs font-semibold text-slate-300 mb-1.5">
+            <span>變更百分比 (Percent Change %)</span>
+            <span class="text-[11px] font-mono text-emerald-400">Δ%</span>
+          </label>
+          <div class="relative">
+            <input type="number" id="pct" step="any" placeholder="請輸入百分比"
+              class="loki-input w-full px-3.5 py-2.5 rounded-xl font-mono text-sm sm:text-base pr-8 focus:ring-1 focus:ring-loki-gold transition">
+            <span class="absolute right-3.5 top-3 text-xs font-mono text-slate-500">%</span>
+          </div>
+        </div>
 
-<!-- 第二部分：二次加倉風控計算器 -->
-<div class="card">
-  <span class="badge">Qullamaggie 風控模型</span>
-  <h2 style="margin-top: 0.3rem;">二次加倉 (Pyramiding) 計算器</h2>
+        <div class="rune-divider my-4"></div>
 
-  <div class="grid-2">
-    <div class="input-group">
-      <label for="p1">Trade 1 倉位 P1 (%)</label>
-      <input type="number" id="p1" step="any" placeholder="請輸入數值">
-    </div>
-    <div class="input-group">
-      <label for="b1">Trade 1 買入價 B1 ($)</label>
-      <input type="number" id="b1" step="any" placeholder="請輸入數值">
-    </div>
-  </div>
+        <!-- Max Position Size for 1% Risk -->
+        <div>
+          <label for="maxPos" class="flex justify-between items-center text-xs font-semibold text-loki-goldBright mb-1.5">
+            <span class="flex items-center gap-1.5">
+              <span>🛡️ 最大倉位佔比 (Max Position%)</span>
+            </span>
+            <span class="text-[11px] font-mono text-amber-300">[-1% Total Risk]</span>
+          </label>
+          <div class="relative">
+            <input type="text" id="maxPos" placeholder="自動計算" readonly
+              class="loki-readonly w-full px-3.5 py-2.5 rounded-xl font-mono text-base font-bold text-amber-300 tracking-wider shadow-inner">
+          </div>
+        </div>
 
-  <div class="input-group">
-    <label for="t1InitialSL">Trade 1 初始止蝕價 (-1% Total Loss)</label>
-    <input type="text" id="t1InitialSL" placeholder="自動計算 (填入 P1 與 B1)" readonly>
-  </div>
+        <!-- Status Notification -->
+        <div id="statusText" class="p-2.5 rounded-lg bg-loki-abyss/90 border border-slate-800 text-xs font-mono text-slate-400 flex items-center gap-2">
+          <span class="text-loki-gold">⚜️</span>
+          <span>請輸入任意 2 個數值來計算第 3 個數值。</span>
+        </div>
+      </div>
+    </section>
 
-  <div class="input-group">
-    <label for="sl">全新統一止蝕價 New SL ($)</label>
-    <input type="number" id="sl" step="any" placeholder="請輸入數值">
-  </div>
+    <section class="loki-card rounded-2xl p-5 sm:p-7 shadow-loki-emerald backdrop-blur-xl">
+      <!-- Section Title & Badge -->
+      <div class="flex items-center justify-between pb-3 mb-5 border-b border-loki-gold/25">
+        <div class="flex items-center gap-2.5">
+          <div class="w-8 h-8 rounded-lg bg-loki-emeraldDark flex items-center justify-center border border-loki-emerald/40 text-loki-gold">
+            <svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/>
+            </svg>
+          </div>
+          <div>
+            <h2 class="text-base font-bold text-white font-title tracking-wide">二次加倉 (Pyramiding) 風控模型</h2>
+            <p class="text-[11px] text-slate-400 font-mono">Qullamaggie 嚴格回撤風控公式</p>
+          </div>
+        </div>
+        <span class="text-[10px] font-mono font-bold bg-emerald-950/80 text-emerald-300 border border-emerald-500/40 px-2 py-0.5 rounded">Risk Engine</span>
+      </div>
 
-  <div class="input-group">
-    <label for="b2">Trade 2 加倉買入價 B2 ($)</label>
-    <input type="number" id="b2" step="any" placeholder="請輸入數值">
-  </div>
+      <div class="space-y-4">
+        <!-- Trade 1 Inputs Row (2 cols) -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+          <div>
+            <label for="p1" class="flex justify-between items-center text-xs font-semibold text-slate-300 mb-1.5">
+              <span>Trade 1 倉位 P1 (%)</span>
+              <span class="text-[11px] font-mono text-emerald-400">P1</span>
+            </label>
+            <input type="number" id="p1" step="any" placeholder="請輸入數值"
+              class="loki-input w-full px-3.5 py-2.5 rounded-xl font-mono text-sm sm:text-base">
+          </div>
 
-  <div class="input-group">
-    <label for="maxLoss">允許總損失上限 (% of Total Equity)</label>
-    <input type="number" id="maxLoss" step="any" value="1.0">
-  </div>
+          <div>
+            <label for="b1" class="flex justify-between items-center text-xs font-semibold text-slate-300 mb-1.5">
+              <span>Trade 1 買入價 B1 ($)</span>
+              <span class="text-[11px] font-mono text-loki-goldBright">B1</span>
+            </label>
+            <input type="number" id="b1" step="any" placeholder="請輸入數值"
+              class="loki-input w-full px-3.5 py-2.5 rounded-xl font-mono text-sm sm:text-base">
+          </div>
+        </div>
 
-  <div class="divider"></div>
+        <!-- T1 Initial SL Output -->
+        <div>
+          <label for="t1InitialSL" class="flex justify-between items-center text-xs font-semibold text-slate-300 mb-1.5">
+            <span>Trade 1 初始止蝕價 (-1% Total Loss)</span>
+            <span class="text-[11px] font-mono text-slate-500">Auto Stop</span>
+          </label>
+          <input type="text" id="t1InitialSL" placeholder="自動計算 (填入 P1 與 B1)" readonly
+            class="loki-readonly w-full px-3.5 py-2.5 rounded-xl font-mono text-sm font-semibold text-amber-300">
+        </div>
 
-  <div class="input-group">
-    <label for="p2Max">最多可加倉位 P2 (Max Position 2 %)</label>
-    <input type="text" id="p2Max" placeholder="自動計算" readonly>
-  </div>
+        <!-- New SL & Trade 2 Price (2 cols) -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+          <div>
+            <label for="sl" class="flex justify-between items-center text-xs font-semibold text-slate-300 mb-1.5">
+              <span>全新統一止蝕價 New SL ($)</span>
+              <span class="text-[11px] font-mono text-red-400">SL</span>
+            </label>
+            <input type="number" id="sl" step="any" placeholder="請輸入數值"
+              class="loki-input w-full px-3.5 py-2.5 rounded-xl font-mono text-sm sm:text-base">
+          </div>
 
-  <div class="grid-2">
-    <div class="input-group">
-      <label for="totalPos">合併總倉位 (P1 + P2)</label>
-      <input type="text" id="totalPos" placeholder="-" readonly>
-    </div>
-    <div class="input-group">
-      <label for="avgCost">合併平均成本 ($)</label>
-      <input type="text" id="avgCost" placeholder="-" readonly>
-    </div>
-  </div>
+          <div>
+            <label for="b2" class="flex justify-between items-center text-xs font-semibold text-slate-300 mb-1.5">
+              <span>Trade 2 加倉買入價 B2 ($)</span>
+              <span class="text-[11px] font-mono text-cyan-400">B2</span>
+            </label>
+            <input type="number" id="b2" step="any" placeholder="請輸入數值"
+              class="loki-input w-full px-3.5 py-2.5 rounded-xl font-mono text-sm sm:text-base">
+          </div>
+        </div>
 
-  <div class="status" id="pyramidStatus">請填入 P1、B1、New SL 與 B2。</div>
-</div>
+        <!-- Max Total Allowed Loss -->
+        <div>
+          <label for="maxLoss" class="flex justify-between items-center text-xs font-semibold text-slate-300 mb-1.5">
+            <span>允許總損失上限 (% of Total Equity)</span>
+            <span class="text-[11px] font-mono text-slate-500">Max Account Risk</span>
+          </label>
+          <div class="relative">
+            <input type="number" id="maxLoss" step="any" value="1.0"
+              class="loki-input w-full px-3.5 py-2.5 rounded-xl font-mono text-sm sm:text-base pr-8">
+            <span class="absolute right-3.5 top-3 text-xs font-mono text-slate-500">%</span>
+          </div>
+        </div>
 
-<script>
-  // --- 原計算器邏輯 ---
-  const inputs = {
-    v1: document.getElementById('v1'),
-    v2: document.getElementById('v2'),
-    pct: document.getElementById('pct')
-  };
-  const maxPosInput = document.getElementById('maxPos');
-  const statusText = document.getElementById('statusText');
-  let history = [];
+        <div class="rune-divider my-4"></div>
 
-  Object.keys(inputs).forEach(key => {
-    inputs[key].addEventListener('input', () => onInputChanged(key));
-  });
+        <!-- Outputs: P2 Max Position -->
+        <div class="p-4 rounded-xl bg-loki-surface/90 border border-loki-gold/40 shadow-inner">
+          <div class="text-xs text-loki-goldBright font-medium mb-1 flex items-center justify-between">
+            <span>🔥 最多可加倉位 P2 (Max Position 2)</span>
+            <span class="text-[10px] font-mono bg-loki-abyss border border-loki-gold/40 px-1.5 py-0.5 rounded text-loki-goldBright">Cap</span>
+          </div>
+          <input type="text" id="p2Max" placeholder="自動計算" readonly
+            class="bg-transparent border-0 w-full p-0 font-mono text-2xl sm:text-3xl font-bold text-emerald-400 focus:outline-none">
+        </div>
 
-  function onInputChanged(changedKey) {
-    history = history.filter(id => id !== changedKey);
-    history.push(changedKey);
-    if (history.length > 2) history.shift();
-    if (history.length === 2) calculateThirdField();
-    updateMaxPosition();
-  }
+        <!-- Combined Total Position & Average Cost -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+          <div class="p-3.5 rounded-xl bg-loki-abyss border border-slate-800">
+            <label class="block text-[11px] font-mono text-slate-400 mb-1">合併總倉位 (P1 + P2)</label>
+            <input type="text" id="totalPos" placeholder="-" readonly
+              class="bg-transparent border-0 w-full p-0 font-mono text-lg font-bold text-white focus:outline-none">
+          </div>
 
-  function calculateThirdField() {
-    const allKeys = ['v1', 'v2', 'pct'];
-    const v1 = parseFloat(inputs.v1.value);
-    const v2 = parseFloat(inputs.v2.value);
-    const pct = parseFloat(inputs.pct.value);
+          <div class="p-3.5 rounded-xl bg-loki-abyss border border-slate-800">
+            <label class="block text-[11px] font-mono text-slate-400 mb-1">合併平均成本 ($)</label>
+            <input type="text" id="avgCost" placeholder="-" readonly
+              class="bg-transparent border-0 w-full p-0 font-mono text-lg font-bold text-loki-goldBright focus:outline-none">
+          </div>
+        </div>
 
-    allKeys.forEach(k => inputs[k].classList.remove('auto-calculated'));
+        <!-- Pyramiding Status Box -->
+        <div id="pyramidStatus" class="p-3 rounded-lg bg-loki-abyss/90 border border-slate-800 text-xs font-mono text-slate-400">
+          請填入 P1、B1、New SL 與 B2。
+        </div>
+      </div>
+    </section>
+  </main>
 
-    if (history.includes('v1') && history.includes('v2')) {
-      if (!isNaN(v1) && !isNaN(v2) && v1 !== 0) {
-        const calculatedPct = ((v2 - v1) / Math.abs(v1)) * 100;
-        inputs.pct.value = Number(calculatedPct.toFixed(4));
-        inputs.pct.classList.add('auto-calculated');
-        statusText.innerText = '已根據「初始值」與「最終值」自動推導「變更百分比」。';
-      }
-    } else if (history.includes('v2') && history.includes('pct')) {
-      if (!isNaN(v2) && !isNaN(pct) && (1 + pct / 100) !== 0) {
-        const calculatedV1 = v2 / (1 + pct / 100);
-        inputs.v1.value = Number(calculatedV1.toFixed(4));
-        inputs.v1.classList.add('auto-calculated');
-        statusText.innerText = '已根據「最終值」與「變更百分比」自動推導「初始值」。';
-      }
-    } else if (history.includes('v1') && history.includes('pct')) {
-      if (!isNaN(v1) && !isNaN(pct)) {
-        const calculatedV2 = v1 * (1 + pct / 100);
-        inputs.v2.value = Number(calculatedV2.toFixed(4));
-        inputs.v2.classList.add('auto-calculated');
-        statusText.innerText = '已根據「初始值」與「變更百分比」自動推導「最終值」。';
+  <!-- Footer -->
+  <footer class="mt-8 text-center text-xs font-mono text-slate-500 flex items-center justify-center gap-1.5">
+    <span>Time Loom Terminal</span> &bull; <span>Loki Edition</span>
+  </footer>
+
+  <script>
+    // --- 原計算器邏輯：三向百分比 ---
+    const inputs = {
+      v1: document.getElementById('v1'),
+      v2: document.getElementById('v2'),
+      pct: document.getElementById('pct')
+    };
+    const maxPosInput = document.getElementById('maxPos');
+    const statusText = document.getElementById('statusText');
+    let history = [];
+
+    Object.keys(inputs).forEach(key => {
+      inputs[key].addEventListener('input', () => onInputChanged(key));
+    });
+
+    function onInputChanged(changedKey) {
+      history = history.filter(id => id !== changedKey);
+      history.push(changedKey);
+      if (history.length > 2) history.shift();
+      if (history.length === 2) calculateThirdField();
+      updateMaxPosition();
+    }
+
+    function calculateThirdField() {
+      const allKeys = ['v1', 'v2', 'pct'];
+      const v1 = parseFloat(inputs.v1.value);
+      const v2 = parseFloat(inputs.v2.value);
+      const pct = parseFloat(inputs.pct.value);
+
+      allKeys.forEach(k => inputs[k].classList.remove('auto-calculated'));
+
+      if (history.includes('v1') && history.includes('v2')) {
+        if (!isNaN(v1) && !isNaN(v2) && v1 !== 0) {
+          const calculatedPct = ((v2 - v1) / Math.abs(v1)) * 100;
+          inputs.pct.value = Number(calculatedPct.toFixed(4));
+          inputs.pct.classList.add('auto-calculated');
+          statusText.innerHTML = '<span class="text-emerald-400">⚡ 已根據「初始值」與「最終值」自動推導「變更百分比」。</span>';
+        }
+      } else if (history.includes('v2') && history.includes('pct')) {
+        if (!isNaN(v2) && !isNaN(pct) && (1 + pct / 100) !== 0) {
+          const calculatedV1 = v2 / (1 + pct / 100);
+          inputs.v1.value = Number(calculatedV1.toFixed(4));
+          inputs.v1.classList.add('auto-calculated');
+          statusText.innerHTML = '<span class="text-emerald-400">⚡ 已根據「最終值」與「變更百分比」自動推導「初始值」。</span>';
+        }
+      } else if (history.includes('v1') && history.includes('pct')) {
+        if (!isNaN(v1) && !isNaN(pct)) {
+          const calculatedV2 = v1 * (1 + pct / 100);
+          inputs.v2.value = Number(calculatedV2.toFixed(4));
+          inputs.v2.classList.add('auto-calculated');
+          statusText.innerHTML = '<span class="text-emerald-400">⚡ 已根據「初始值」與「變更百分比」自動推導「最終值」。</span>';
+        }
       }
     }
-  }
 
-  function updateMaxPosition() {
-    const pct = parseFloat(inputs.pct.value);
-    if (!isNaN(pct) && pct !== 0) {
-      const maxPosPercent = (1 / Math.abs(pct)) * 100;
-      maxPosInput.value = Number(maxPosPercent.toFixed(2)) + '%';
-    } else {
-      maxPosInput.value = '';
-    }
-  }
-
-  // --- 二次加倉 (Pyramiding) 計算邏輯 ---
-  const pyramidInputs = ['p1', 'b1', 'sl', 'b2', 'maxLoss'].map(id => document.getElementById(id));
-  const t1InitialSLOut = document.getElementById('t1InitialSL');
-  const p2MaxOut = document.getElementById('p2Max');
-  const totalPosOut = document.getElementById('totalPos');
-  const avgCostOut = document.getElementById('avgCost');
-  const pyramidStatus = document.getElementById('pyramidStatus');
-
-  pyramidInputs.forEach(el => el.addEventListener('input', calculatePyramiding));
-
-  function calculatePyramiding() {
-    const p1 = parseFloat(document.getElementById('p1').value); // 百分比數字 (如 9.49)
-    const b1 = parseFloat(document.getElementById('b1').value);
-    const sl = parseFloat(document.getElementById('sl').value);
-    const b2 = parseFloat(document.getElementById('b2').value);
-    const maxLossVal = parseFloat(document.getElementById('maxLoss').value);
-    const maxLoss = (!isNaN(maxLossVal) ? maxLossVal : 1.0) / 100; // 預設 1%
-
-    // 1. 自動計算 Trade 1 初始止蝕位：止蝕價 = B1 * (1 - (maxLossVal / P1))
-    if (!isNaN(p1) && !isNaN(b1) && p1 > 0) {
-      const lossAllowed = !isNaN(maxLossVal) ? maxLossVal : 1.0;
-      const initialSL = b1 * (1 - (lossAllowed / p1));
-      const ddPct = (lossAllowed / p1) * 100;
-      if (initialSL > 0) {
-        t1InitialSLOut.value = '$' + Number(initialSL.toFixed(3)) + ` (-${ddPct.toFixed(2)}%)`;
+    function updateMaxPosition() {
+      const pct = parseFloat(inputs.pct.value);
+      if (!isNaN(pct) && pct !== 0) {
+        const maxPosPercent = (1 / Math.abs(pct)) * 100;
+        maxPosInput.value = Number(maxPosPercent.toFixed(2)) + '%';
       } else {
-        t1InitialSLOut.value = '無效 (P1 過小)';
+        maxPosInput.value = '';
       }
-    } else {
-      t1InitialSLOut.value = '';
     }
 
-    // 2. 計算加倉相關
-    const p1Dec = p1 / 100;
-    if (isNaN(p1Dec) || isNaN(b1) || isNaN(sl) || isNaN(b2)) {
-      p2MaxOut.value = '';
-      totalPosOut.value = '-';
-      avgCostOut.value = '-';
-      pyramidStatus.innerText = '請填入 P1、B1、New SL 與 B2。';
-      return;
+    // --- 二次加倉 (Pyramiding) 風控模型計算邏輯 ---
+    const pyramidInputs = ['p1', 'b1', 'sl', 'b2', 'maxLoss'].map(id => document.getElementById(id));
+    const t1InitialSLOut = document.getElementById('t1InitialSL');
+    const p2MaxOut = document.getElementById('p2Max');
+    const totalPosOut = document.getElementById('totalPos');
+    const avgCostOut = document.getElementById('avgCost');
+    const pyramidStatus = document.getElementById('pyramidStatus');
+
+    pyramidInputs.forEach(el => el.addEventListener('input', calculatePyramiding));
+
+    function calculatePyramiding() {
+      const p1 = parseFloat(document.getElementById('p1').value);
+      const b1 = parseFloat(document.getElementById('b1').value);
+      const sl = parseFloat(document.getElementById('sl').value);
+      const b2 = parseFloat(document.getElementById('b2').value);
+      const maxLossVal = parseFloat(document.getElementById('maxLoss').value);
+      const maxLoss = (!isNaN(maxLossVal) ? maxLossVal : 1.0) / 100;
+
+      // 1. 自動計算 Trade 1 初始止蝕位：止蝕價 = B1 * (1 - (maxLossVal / P1))
+      if (!isNaN(p1) && !isNaN(b1) && p1 > 0) {
+        const lossAllowed = !isNaN(maxLossVal) ? maxLossVal : 1.0;
+        const initialSL = b1 * (1 - (lossAllowed / p1));
+        const ddPct = (lossAllowed / p1) * 100;
+        if (initialSL > 0) {
+          t1InitialSLOut.value = '$' + Number(initialSL.toFixed(3)) + ` (-${ddPct.toFixed(2)}%)`;
+        } else {
+          t1InitialSLOut.value = '無效 (P1 倉位過小)';
+        }
+      } else {
+        t1InitialSLOut.value = '';
+      }
+
+      // 2. 加倉運算驗證
+      const p1Dec = p1 / 100;
+      if (isNaN(p1Dec) || isNaN(b1) || isNaN(sl) || isNaN(b2)) {
+        p2MaxOut.value = '';
+        totalPosOut.value = '-';
+        avgCostOut.value = '-';
+        pyramidStatus.innerHTML = '請填入 P1、B1、New SL 與 B2。';
+        return;
+      }
+
+      if (b2 <= sl) {
+        pyramidStatus.innerHTML = '<span class="text-amber-400 font-semibold">⚠️ 加倉價 B2 必須大於全新止蝕價 New SL。</span>';
+        p2MaxOut.value = '無效';
+        totalPosOut.value = '-';
+        avgCostOut.value = '-';
+        return;
+      }
+
+      // Trade 1 在觸發 SL 時對總資產帶來的盈虧百分比
+      const p1ReturnAtSL = (sl - b1) / b1;
+      const p1Contribution = p1Dec * p1ReturnAtSL;
+
+      // Trade 2 下跌至 SL 時的損失幅度 (正數)
+      const p2Drawdown = (b2 - sl) / b2;
+
+      // 可分配給 Trade 2 的總虧損空間
+      const allowedP2Loss = maxLoss + p1Contribution;
+
+      if (allowedP2Loss <= 0) {
+        pyramidStatus.innerHTML = '<span class="text-red-400 font-semibold">⚠️ Trade 1 虧損已超出帳戶總風險上限，無法進行任何加倉！</span>';
+        p2MaxOut.value = '0.00%';
+        totalPosOut.value = Number(p1.toFixed(2)) + '%';
+        avgCostOut.value = '$' + Number(b1.toFixed(3));
+        return;
+      }
+
+      // 計算 Trade 2 最大倉位佔比
+      const p2 = allowedP2Loss / p2Drawdown;
+      const p2Percent = p2 * 100;
+      const totalPosPercent = (p1Dec + p2) * 100;
+
+      // 計算加權平均成本
+      const sharesWeight1 = p1Dec / b1;
+      const sharesWeight2 = p2 / b2;
+      const avgCost = (p1Dec + p2) / (sharesWeight1 + sharesWeight2);
+
+      p2MaxOut.value = Number(p2Percent.toFixed(2)) + '%';
+      totalPosOut.value = Number(totalPosPercent.toFixed(2)) + '%';
+      avgCostOut.value = '$' + Number(avgCost.toFixed(3));
+
+      if (p1Contribution > 0) {
+        pyramidStatus.innerHTML = `<span class="text-emerald-400 font-semibold">✅ Trade 1 已鎖定 +${(p1Contribution * 100).toFixed(2)}% 利潤緩衝，容許更大加倉額。</span>`;
+      } else {
+        pyramidStatus.innerHTML = `<span class="text-slate-300">ℹ️ 觸發止蝕時，整體倉位最大虧損恰好為總本金的 ${(maxLoss * 100).toFixed(1)}%。</span>`;
+      }
     }
-
-    if (b2 <= sl) {
-      pyramidStatus.innerText = '⚠️ 加倉價 B2 必須大於全新止蝕價 New SL。';
-      p2MaxOut.value = '無效';
-      totalPosOut.value = '-';
-      avgCostOut.value = '-';
-      return;
-    }
-
-    // Trade 1 在觸發 SL 時對總資產帶來的盈虧百分比
-    const p1ReturnAtSL = (sl - b1) / b1;
-    const p1Contribution = p1Dec * p1ReturnAtSL;
-
-    // Trade 2 下跌至 SL 時的損失幅度 (正數)
-    const p2Drawdown = (b2 - sl) / b2;
-
-    // 可分配給 Trade 2 的總虧損空間
-    const allowedP2Loss = maxLoss + p1Contribution;
-
-    if (allowedP2Loss <= 0) {
-      pyramidStatus.innerText = '⚠️ Trade 1 虧損已超出上限，無法進行任何加倉！';
-      p2MaxOut.value = '0.00%';
-      totalPosOut.value = Number(p1.toFixed(2)) + '%';
-      avgCostOut.value = '$' + Number(b1.toFixed(3));
-      return;
-    }
-
-    // 計算 Trade 2 最大倉位佔比
-    const p2 = allowedP2Loss / p2Drawdown;
-    const p2Percent = p2 * 100;
-    const totalPosPercent = (p1Dec + p2) * 100;
-
-    // 計算加權平均成本
-    const sharesWeight1 = p1Dec / b1;
-    const sharesWeight2 = p2 / b2;
-    const avgCost = (p1Dec + p2) / (sharesWeight1 + sharesWeight2);
-
-    p2MaxOut.value = Number(p2Percent.toFixed(2)) + '%';
-    totalPosOut.value = Number(totalPosPercent.toFixed(2)) + '%';
-    avgCostOut.value = '$' + Number(avgCost.toFixed(3));
-
-    if (p1Contribution > 0) {
-      pyramidStatus.innerText = `✅ Trade 1 已鎖定 +${(p1Contribution * 100).toFixed(2)}% 利潤緩衝，容許更大加倉額。`;
-    } else {
-      pyramidStatus.innerText = `ℹ️ 觸發止蝕時，整體倉位最大虧損恰好為總本金的 ${(maxLoss * 100).toFixed(1)}%。`;
-    }
-  }
-</script>
-
+  </script>
 </body>
 </html>
