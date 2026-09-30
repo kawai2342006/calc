@@ -55,7 +55,6 @@
       background-attachment: fixed;
     }
 
-    /* Loki Card & Edge Styling */
     .loki-card {
       background: linear-gradient(165deg, rgba(15, 34, 25, 0.94) 0%, rgba(7, 16, 11, 0.96) 100%);
       border: 1px solid rgba(212, 175, 55, 0.25);
@@ -91,11 +90,6 @@
       outline: none;
       border-color: #f3d36b;
       box-shadow: 0 0 16px rgba(212, 175, 55, 0.35), inset 0 0 8px rgba(16, 185, 129, 0.15);
-    }
-
-    .loki-readonly {
-      background: rgba(5, 12, 9, 0.92);
-      border-color: rgba(212, 175, 55, 0.2);
     }
 
     .rune-divider {
@@ -144,7 +138,7 @@
           <!-- 1. Sell Price -->
           <div>
             <label for="sellPrice" class="flex justify-between items-center text-xs font-semibold text-slate-300 mb-1.5">
-              <span>1. 賣出價 ($)</span>
+              <span>1. 預計賣出價 ($)</span>
               <span class="text-[11px] font-mono text-emerald-400">Sell Price</span>
             </label>
             <input type="number" step="any" id="sellPrice" placeholder="請輸入數值"
@@ -154,27 +148,27 @@
           <!-- 2. Cost Price -->
           <div>
             <label for="costPrice" class="flex justify-between items-center text-xs font-semibold text-slate-300 mb-1.5">
-              <span>2. 成本價 ($)</span>
+              <span>2. 原始成本價 ($)</span>
               <span class="text-[11px] font-mono text-loki-goldDim">Cost Price</span>
             </label>
             <input type="number" step="any" id="costPrice" placeholder="請輸入數值"
               class="loki-input w-full px-3.5 py-2.5 rounded-xl font-mono text-base font-semibold text-white">
           </div>
 
-          <!-- 3. Current Profit -->
+          <!-- 3. Current Shares Held (Replaced Current Profit) -->
           <div>
-            <label for="currentProfit" class="flex justify-between items-center text-xs font-semibold text-slate-300 mb-1.5">
-              <span>3. 目前盈利 ($)</span>
-              <span class="text-[11px] font-mono text-emerald-400">Profit</span>
+            <label for="totalShares" class="flex justify-between items-center text-xs font-semibold text-slate-300 mb-1.5">
+              <span>3. 目前持有股數 (Shares)</span>
+              <span class="text-[11px] font-mono text-emerald-400">Shares Held</span>
             </label>
-            <input type="number" step="any" id="currentProfit" placeholder="請輸入數值"
+            <input type="number" step="any" id="totalShares" placeholder="請輸入數值"
               class="loki-input w-full px-3.5 py-2.5 rounded-xl font-mono text-base font-semibold text-emerald-400">
           </div>
 
           <!-- 4. Target Cost -->
           <div>
             <label for="targetCost" class="flex justify-between items-center text-xs font-semibold text-loki-goldBright mb-1.5">
-              <span>4. 目標成本 ($)</span>
+              <span>4. 目標攤薄成本 ($)</span>
               <span class="text-[11px] font-mono text-amber-300">Target Diluted Cost</span>
             </label>
             <input type="number" step="any" id="targetCost" placeholder="請輸入數值"
@@ -184,15 +178,15 @@
 
         <div class="rune-divider my-4"></div>
 
-        <!-- Position Implied Info Box -->
+        <!-- Position Auto Computed Stats -->
         <div class="p-3.5 rounded-xl bg-loki-abyss border border-loki-gold/20 font-mono text-xs space-y-1.5">
-          <div class="flex justify-between text-slate-400">
-            <span>反推目前持股數:</span>
-            <span id="impliedShares" class="text-white font-bold">-</span>
-          </div>
           <div class="flex justify-between text-slate-400">
             <span>初始總投入本金:</span>
             <span id="initialCapital" class="text-loki-goldBright font-bold">-</span>
+          </div>
+          <div class="flex justify-between text-slate-400">
+            <span>當前未實現盈利:</span>
+            <span id="currentProfitDisplay" class="text-emerald-400 font-bold">-</span>
           </div>
         </div>
 
@@ -201,7 +195,6 @@
         </div>
       </section>
 
-      <!-- Output Panel (7 cols) -->
       <section class="lg:col-span-7 space-y-5">
         <!-- Error Banner -->
         <div id="alertBox" class="hidden p-4 rounded-xl border border-red-500/40 bg-red-950/25 text-red-300 text-xs font-mono"></div>
@@ -236,7 +229,7 @@
           </div>
 
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-            <!-- Option A: Ceil (Round up -> lower cost than target) -->
+            <!-- Option A: Ceil -->
             <div class="p-4 rounded-xl border border-emerald-500/35 bg-emerald-950/15 flex flex-col justify-between">
               <div>
                 <div class="flex justify-between items-start">
@@ -265,7 +258,7 @@
               </div>
             </div>
 
-            <!-- Option B: Floor (Round down -> keep more shares) -->
+            <!-- Option B: Floor -->
             <div class="p-4 rounded-xl border border-loki-gold/25 bg-loki-abyss/60 flex flex-col justify-between">
               <div>
                 <div class="flex justify-between items-start">
@@ -302,8 +295,10 @@
             <span>📐</span> 攤薄成本公式原理解析
           </div>
           <p class="text-[11px] text-slate-400">
-            剩餘成本 = (原始總本金 - 賣出總變現額) ÷ 剩餘股數<br>
-            若欲將目標成本降為 0，只需將「目標成本」填入 0 即可計算保本零成本股數。
+            設持有股數為 N，賣出 x 股：<br>
+            攤薄每股成本 = (原始總本金 - x × 賣出價) ÷ (N - x)<br>
+            求解公式：x = N × (成本價 - 目標成本) ÷ (賣出價 - 目標成本)<br>
+            若目標成本填入 0，即為無風險「零成本保本」需賣出之股數。
           </p>
         </div>
       </section>
@@ -319,14 +314,14 @@
     // Input elements
     const sellPriceInput = document.getElementById('sellPrice');
     const costPriceInput = document.getElementById('costPrice');
-    const currentProfitInput = document.getElementById('currentProfit');
+    const totalSharesInput = document.getElementById('totalShares');
     const targetCostInput = document.getElementById('targetCost');
 
     // UI output elements
     const alertBox = document.getElementById('alertBox');
     const statusMessage = document.getElementById('statusMessage');
-    const impliedSharesEl = document.getElementById('impliedShares');
     const initialCapitalEl = document.getElementById('initialCapital');
+    const currentProfitDisplayEl = document.getElementById('currentProfitDisplay');
 
     const exactSellSharesEl = document.getElementById('exactSellShares');
     const exactDilutedCostEl = document.getElementById('exactDilutedCost');
@@ -358,13 +353,13 @@
 
       const sellPrice = parseFloat(sellPriceInput.value);
       const costPrice = parseFloat(costPriceInput.value);
-      const profit = parseFloat(currentProfitInput.value);
+      const totalShares = parseFloat(totalSharesInput.value);
       const targetCost = parseFloat(targetCostInput.value);
 
-      // If any input is not provided, reset to blank state
-      if (isNaN(sellPrice) || isNaN(costPrice) || isNaN(profit) || isNaN(targetCost)) {
-        impliedSharesEl.textContent = '-';
+      // If any input is empty or invalid, clear outputs
+      if (isNaN(sellPrice) || isNaN(costPrice) || isNaN(totalShares) || isNaN(targetCost)) {
         initialCapitalEl.textContent = '-';
+        currentProfitDisplayEl.textContent = '-';
         exactSellSharesEl.textContent = '-';
         exactDilutedCostEl.textContent = '-';
         ceilSharesEl.textContent = '-';
@@ -379,14 +374,14 @@
         return;
       }
 
-      const profitPerShare = sellPrice - costPrice;
-      if (profitPerShare <= 0) {
-        showError('賣出價格必須大於成本價（每股必須獲利才能透過減持降低攤薄成本）。');
+      if (totalShares <= 0) {
+        showError('持有股數必須大於 0。');
         return;
       }
 
-      if (profit <= 0) {
-        showError('目前盈利必須大於 0。');
+      const profitPerShare = sellPrice - costPrice;
+      if (profitPerShare <= 0) {
+        showError('賣出價格必須大於成本價（每股處於獲利狀態，才能透過減持降低攤薄成本）。');
         return;
       }
 
@@ -396,18 +391,18 @@
       }
 
       if (targetCost >= costPrice) {
-        showError('目標成本價應小於原始持倉成本 (' + costPrice + ')，否則不需進行攤薄。');
+        showError('目標成本價應小於原始成本 (' + costPrice + ')，否則不需進行攤薄。');
         return;
       }
 
-      // 1. Calculate implied shares and initial capital
-      const totalShares = profit / profitPerShare;
+      // 1. Calculate Initial Total Capital & Unrealized Profit
       const initialTotalCost = totalShares * costPrice;
+      const unrealizedProfit = totalShares * profitPerShare;
 
-      impliedSharesEl.textContent = formatNum(totalShares, 2) + ' 股';
       initialCapitalEl.textContent = formatMoney(initialTotalCost);
+      currentProfitDisplayEl.textContent = '+' + formatMoney(unrealizedProfit);
 
-      // 2. Solve for exact sell shares x:
+      // 2. Exact Sell Shares x:
       // (initialTotalCost - x * sellPrice) / (totalShares - x) = targetCost
       // x = totalShares * (costPrice - targetCost) / (sellPrice - targetCost)
       const xExact = totalShares * (costPrice - targetCost) / (sellPrice - targetCost);
@@ -425,11 +420,11 @@
       exactSellSharesEl.textContent = formatNum(xExact, 2);
       exactDilutedCostEl.textContent = formatMoney(targetCost);
 
-      // 3. Integer recommendations
+      // 3. Integer Share Recommendations (Ceil and Floor)
       const xCeil = Math.min(totalShares, Math.ceil(xExact));
       const xFloor = Math.max(0, Math.floor(xExact));
 
-      // Ceil calculations
+      // Ceil
       const remCeil = totalShares - xCeil;
       const cashCeil = xCeil * sellPrice;
       const costCeil = remCeil > 0 ? (initialTotalCost - cashCeil) / remCeil : 0;
@@ -439,7 +434,7 @@
       ceilCashEl.textContent = formatMoney(cashCeil);
       ceilRemainingEl.textContent = formatNum(remCeil, 0) + ' 股';
 
-      // Floor calculations
+      // Floor
       const remFloor = totalShares - xFloor;
       const cashFloor = xFloor * sellPrice;
       const costFloor = remFloor > 0 ? (initialTotalCost - cashFloor) / remFloor : 0;
@@ -449,7 +444,7 @@
       floorCashEl.textContent = formatMoney(cashFloor);
       floorRemainingEl.textContent = formatNum(remFloor, 0) + ' 股';
 
-      statusMessage.innerHTML = `<span class="text-emerald-400">⚡ 試算完成：建議賣出 ${formatNum(xCeil, 0)} 股，剩餘 ${formatNum(remCeil, 0)} 股成本將壓至 ${formatMoney(costCeil)}。</span>`;
+      statusMessage.innerHTML = `<span class="text-emerald-400">⚡ 試算完成：建議賣出 ${formatNum(xCeil, 0)} 股，剩餘 ${formatNum(remCeil, 0)} 股成本將降至 ${formatMoney(costCeil)}。</span>`;
     }
 
     function showError(msg) {
@@ -458,7 +453,7 @@
       statusMessage.textContent = '⚠️ 請修正上方錯誤數值。';
     }
 
-    [sellPriceInput, costPriceInput, currentProfitInput, targetCostInput].forEach(input => {
+    [sellPriceInput, costPriceInput, totalSharesInput, targetCostInput].forEach(input => {
       input.addEventListener('input', calculate);
     });
   </script>
