@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LOKI 攤薄持倉成本計算器 | TVA Diluted Cost Terminal</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts: Cinzel, Plus Jakarta Sans, JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            title: ['Cinzel', 'serif'],
+            sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+            mono: ['"JetBrains Mono"', 'monospace'],
+          },
+          colors: {
+            loki: {
+              void: '#040806',
+              abyss: '#07100b',
+              surface: '#0b1912',
+              card: '#0f2219',
+              gold: '#d4af37',
+              goldBright: '#f3d36b',
+              goldDim: '#8b7224',
+              emerald: '#10b981',
+              emeraldLight: '#34d399',
+              emeraldGlow: '#059669',
+              emeraldDark: '#043422',
+            }
+          },
+          boxShadow: {
+            'loki-gold': '0 0 25px -4px rgba(212, 175, 55, 0.25)',
+            'loki-emerald': '0 0 30px -5px rgba(16, 185, 129, 0.3)',
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body {
+      background-color: #040806;
+      color: #e2e8f0;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background-image: 
+        radial-gradient(circle at 50% 0%, rgba(16, 185, 129, 0.12) 0%, transparent 55%),
+        radial-gradient(circle at 100% 70%, rgba(212, 175, 55, 0.08) 0%, transparent 45%),
+        radial-gradient(circle at 0% 90%, rgba(5, 150, 105, 0.08) 0%, transparent 50%);
+      background-attachment: fixed;
+    }
+
+    /* Loki Card & Edge Styling */
+    .loki-card {
+      background: linear-gradient(165deg, rgba(15, 34, 25, 0.94) 0%, rgba(7, 16, 11, 0.96) 100%);
+      border: 1px solid rgba(212, 175, 55, 0.25);
+      position: relative;
+    }
+    .loki-card::before {
+      content: '';
+      position: absolute;
+      inset: -1px;
+      border-radius: inherit;
+      padding: 1px;
+      background: linear-gradient(135deg, rgba(243, 211, 107, 0.4), transparent 45%, rgba(16, 185, 129, 0.35));
+      -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+      -webkit-mask-composite: xor;
+      mask-composite: exclude;
+      pointer-events: none;
+    }
+
+    input[type=number]::-webkit-inner-spin-button, 
+    input[type=number]::-webkit-outer-spin-button { 
+      -webkit-appearance: none; 
+      margin: 0; 
+    }
+    input[type=number] { -moz-appearance: textfield; }
+
+    .loki-input {
+      background: rgba(4, 10, 7, 0.85);
+      border: 1px solid rgba(212, 175, 55, 0.3);
+      color: #f1f5f9;
+      transition: all 0.25s ease;
+    }
+    .loki-input:focus {
+      outline: none;
+      border-color: #f3d36b;
+      box-shadow: 0 0 16px rgba(212, 175, 55, 0.35), inset 0 0 8px rgba(16, 185, 129, 0.15);
+    }
+
+    .loki-readonly {
+      background: rgba(5, 12, 9, 0.92);
+      border-color: rgba(212, 175, 55, 0.2);
+    }
+
+    .rune-divider {
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(212, 175, 55, 0.6), rgba(16, 185, 129, 0.6), transparent);
+    }
+  </style>
+</head>
+<body class="min-h-screen py-8 px-4 sm:px-6 flex flex-col justify-between selection:bg-loki-emerald selection:text-loki-void">
+
+  <main class="max-w-4xl mx-auto w-full space-y-7">
+    <!-- Header -->
+    <header class="text-center relative pt-2 pb-1">
+      <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-loki-gold/40 bg-loki-abyss/80 shadow-loki-gold mb-3">
+        <span class="w-2 h-2 rounded-full bg-loki-emerald animate-ping"></span>
+        <span class="text-[11px] font-mono tracking-widest text-loki-goldBright uppercase font-semibold">TVA Diluted Cost Terminal</span>
+      </div>
+
+      <h1 class="text-3xl sm:text-4xl font-extrabold tracking-wider font-title text-transparent bg-clip-text bg-gradient-to-r from-loki-goldBright via-yellow-100 to-loki-gold">
+        GLORIOUS POSITION
+      </h1>
+      <p class="text-xs sm:text-sm text-emerald-400/90 font-mono tracking-wide mt-1.5 flex items-center justify-center gap-1.5">
+        <span>⚔️</span> 攤薄持倉成本 <span>&bull;</span> 零成本保本推演
+      </p>
+    </header>
+
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+      <!-- Input Panel (5 cols) -->
+      <section class="lg:col-span-5 loki-card rounded-2xl p-5 sm:p-6 shadow-loki-emerald backdrop-blur-xl">
+        <div class="flex items-center justify-between pb-3 mb-5 border-b border-loki-gold/25">
+          <div class="flex items-center gap-2.5">
+            <div class="w-8 h-8 rounded-lg bg-loki-emeraldDark flex items-center justify-center border border-loki-emerald/40 text-loki-gold">
+              <svg class="w-4 h-4 text-loki-goldBright" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"/>
+              </svg>
+            </div>
+            <div>
+              <h2 class="text-base font-bold text-white font-title tracking-wide">輸入參數</h2>
+              <p class="text-[11px] text-slate-400 font-mono">Input Coordinates</p>
+            </div>
+          </div>
+          <span class="text-[10px] font-mono uppercase bg-loki-abyss border border-loki-gold/30 px-2 py-0.5 rounded text-loki-goldBright">PARAMS</span>
+        </div>
+
+        <form id="calcForm" class="space-y-4" onsubmit="event.preventDefault();">
+          <!-- 1. Sell Price -->
+          <div>
+            <label for="sellPrice" class="flex justify-between items-center text-xs font-semibold text-slate-300 mb-1.5">
+              <span>1. 賣出價 ($)</span>
+              <span class="text-[11px] font-mono text-emerald-400">Sell Price</span>
+            </label>
+            <input type="number" step="any" id="sellPrice" placeholder="請輸入數值"
+              class="loki-input w-full px-3.5 py-2.5 rounded-xl font-mono text-base font-semibold text-emerald-300">
+          </div>
+
+          <!-- 2. Cost Price -->
+          <div>
+            <label for="costPrice" class="flex justify-between items-center text-xs font-semibold text-slate-300 mb-1.5">
+              <span>2. 成本價 ($)</span>
+              <span class="text-[11px] font-mono text-loki-goldDim">Cost Price</span>
+            </label>
+            <input type="number" step="any" id="costPrice" placeholder="請輸入數值"
+              class="loki-input w-full px-3.5 py-2.5 rounded-xl font-mono text-base font-semibold text-white">
+          </div>
+
+          <!-- 3. Current Profit -->
+          <div>
+            <label for="currentProfit" class="flex justify-between items-center text-xs font-semibold text-slate-300 mb-1.5">
+              <span>3. 目前盈利 ($)</span>
+              <span class="text-[11px] font-mono text-emerald-400">Profit</span>
+            </label>
+            <input type="number" step="any" id="currentProfit" placeholder="請輸入數值"
+              class="loki-input w-full px-3.5 py-2.5 rounded-xl font-mono text-base font-semibold text-emerald-400">
+          </div>
+
+          <!-- 4. Target Cost -->
+          <div>
+            <label for="targetCost" class="flex justify-between items-center text-xs font-semibold text-loki-goldBright mb-1.5">
+              <span>4. 目標成本 ($)</span>
+              <span class="text-[11px] font-mono text-amber-300">Target Diluted Cost</span>
+            </label>
+            <input type="number" step="any" id="targetCost" placeholder="請輸入數值"
+              class="loki-input w-full px-3.5 py-2.5 rounded-xl font-mono text-base font-semibold text-amber-300">
+          </div>
+        </form>
+
+        <div class="rune-divider my-4"></div>
+
+        <!-- Position Implied Info Box -->
+        <div class="p-3.5 rounded-xl bg-loki-abyss border border-loki-gold/20 font-mono text-xs space-y-1.5">
+          <div class="flex justify-between text-slate-400">
+            <span>反推目前持股數:</span>
+            <span id="impliedShares" class="text-white font-bold">-</span>
+          </div>
+          <div class="flex justify-between text-slate-400">
+            <span>初始總投入本金:</span>
+            <span id="initialCapital" class="text-loki-goldBright font-bold">-</span>
+          </div>
+        </div>
+
+        <div id="statusMessage" class="mt-3.5 p-3 rounded-lg bg-loki-abyss/80 border border-slate-800 text-xs font-mono text-slate-400">
+          請依序填入上述 4 項參數以開始運算。
+        </div>
+      </section>
+
+      <!-- Output Panel (7 cols) -->
+      <section class="lg:col-span-7 space-y-5">
+        <!-- Error Banner -->
+        <div id="alertBox" class="hidden p-4 rounded-xl border border-red-500/40 bg-red-950/25 text-red-300 text-xs font-mono"></div>
+
+        <!-- Exact Theoretical Card -->
+        <div class="loki-card rounded-2xl p-6 shadow-loki-gold relative overflow-hidden">
+          <div class="flex justify-between items-center pb-3 border-b border-loki-gold/25">
+            <span class="text-xs font-bold uppercase tracking-wider text-loki-goldBright font-mono">理論精確值 (Exact Theoretical)</span>
+            <span class="text-[10px] bg-emerald-950 text-emerald-300 border border-emerald-500/40 px-2 py-0.5 rounded font-mono">Optimal</span>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-5">
+            <div>
+              <div class="text-xs text-slate-400 mb-1">需賣出股數 (Shares to Sell)</div>
+              <div class="text-3xl sm:text-4xl font-bold font-mono text-emerald-400 tracking-tight" id="exactSellShares">-</div>
+              <div class="text-[11px] text-slate-500 mt-1 font-mono">精確小數股數</div>
+            </div>
+
+            <div>
+              <div class="text-xs text-slate-400 mb-1">攤薄後每股成本</div>
+              <div class="text-3xl sm:text-4xl font-bold font-mono text-loki-goldBright tracking-tight" id="exactDilutedCost">-</div>
+              <div class="text-[11px] text-slate-500 mt-1 font-mono">完全吻合目標值</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Integer Share Practical Recommendations -->
+        <div class="loki-card rounded-2xl p-5 shadow-loki-emerald">
+          <div class="flex justify-between items-center mb-3">
+            <h3 class="text-xs font-bold uppercase tracking-wider text-white font-title">實盤整數股執行建議</h3>
+            <span class="text-[11px] text-slate-400 font-mono">整數股下單專用</span>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+            <!-- Option A: Ceil (Round up -> lower cost than target) -->
+            <div class="p-4 rounded-xl border border-emerald-500/35 bg-emerald-950/15 flex flex-col justify-between">
+              <div>
+                <div class="flex justify-between items-start">
+                  <span class="text-xs font-semibold text-emerald-400 font-mono">無條件進位 (壓低成本)</span>
+                  <span class="text-[10px] bg-emerald-900/90 text-emerald-300 px-1.5 py-0.5 rounded font-mono">推薦安全</span>
+                </div>
+                <div class="mt-3 flex items-baseline gap-2">
+                  <span class="text-2xl font-bold font-mono text-white" id="ceilShares">-</span>
+                  <span class="text-xs text-slate-400">賣出</span>
+                </div>
+              </div>
+
+              <div class="mt-4 pt-3 border-t border-slate-800 text-xs font-mono space-y-1.5">
+                <div class="flex justify-between text-slate-300">
+                  <span class="text-slate-400">攤薄後成本:</span>
+                  <span class="font-bold text-emerald-400" id="ceilCost">-</span>
+                </div>
+                <div class="flex justify-between text-slate-400">
+                  <span>變現金額:</span>
+                  <span class="text-white" id="ceilCash">-</span>
+                </div>
+                <div class="flex justify-between text-slate-400">
+                  <span>剩餘持股:</span>
+                  <span class="text-white" id="ceilRemaining">-</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Option B: Floor (Round down -> keep more shares) -->
+            <div class="p-4 rounded-xl border border-loki-gold/25 bg-loki-abyss/60 flex flex-col justify-between">
+              <div>
+                <div class="flex justify-between items-start">
+                  <span class="text-xs font-semibold text-loki-goldBright font-mono">無條件捨去 (保留持股)</span>
+                  <span class="text-[10px] bg-slate-800 text-slate-300 px-1.5 py-0.5 rounded font-mono">利潤放大</span>
+                </div>
+                <div class="mt-3 flex items-baseline gap-2">
+                  <span class="text-2xl font-bold font-mono text-white" id="floorShares">-</span>
+                  <span class="text-xs text-slate-400">賣出</span>
+                </div>
+              </div>
+
+              <div class="mt-4 pt-3 border-t border-slate-800 text-xs font-mono space-y-1.5">
+                <div class="flex justify-between text-slate-300">
+                  <span class="text-slate-400">攤薄後成本:</span>
+                  <span class="font-bold text-slate-200" id="floorCost">-</span>
+                </div>
+                <div class="flex justify-between text-slate-400">
+                  <span>變現金額:</span>
+                  <span class="text-white" id="floorCash">-</span>
+                </div>
+                <div class="flex justify-between text-slate-400">
+                  <span>剩餘持股:</span>
+                  <span class="text-white" id="floorRemaining">-</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Formula Guide Note -->
+        <div class="p-4 rounded-xl bg-loki-abyss/70 border border-slate-800 text-xs font-mono text-slate-400 leading-relaxed">
+          <div class="text-loki-goldBright font-semibold mb-1 flex items-center gap-1.5">
+            <span>📐</span> 攤薄成本公式原理解析
+          </div>
+          <p class="text-[11px] text-slate-400">
+            剩餘成本 = (原始總本金 - 賣出總變現額) ÷ 剩餘股數<br>
+            若欲將目標成本降為 0，只需將「目標成本」填入 0 即可計算保本零成本股數。
+          </p>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <footer class="mt-8 text-center text-xs font-mono text-slate-500 flex items-center justify-center gap-1.5">
+    <span>Time Loom Terminal</span> &bull; <span>Loki Edition</span>
+  </footer>
+
+  <script>
+    // Input elements
+    const sellPriceInput = document.getElementById('sellPrice');
+    const costPriceInput = document.getElementById('costPrice');
+    const currentProfitInput = document.getElementById('currentProfit');
+    const targetCostInput = document.getElementById('targetCost');
+
+    // UI output elements
+    const alertBox = document.getElementById('alertBox');
+    const statusMessage = document.getElementById('statusMessage');
+    const impliedSharesEl = document.getElementById('impliedShares');
+    const initialCapitalEl = document.getElementById('initialCapital');
+
+    const exactSellSharesEl = document.getElementById('exactSellShares');
+    const exactDilutedCostEl = document.getElementById('exactDilutedCost');
+
+    const ceilSharesEl = document.getElementById('ceilShares');
+    const ceilCostEl = document.getElementById('ceilCost');
+    const ceilCashEl = document.getElementById('ceilCash');
+    const ceilRemainingEl = document.getElementById('ceilRemaining');
+
+    const floorSharesEl = document.getElementById('floorShares');
+    const floorCostEl = document.getElementById('floorCost');
+    const floorCashEl = document.getElementById('floorCash');
+    const floorRemainingEl = document.getElementById('floorRemaining');
+
+    // Formatters
+    const formatMoney = (val) => {
+      if (isNaN(val) || !isFinite(val)) return '-';
+      return '$' + Number(val).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    };
+
+    const formatNum = (val, decimals = 2) => {
+      if (isNaN(val) || !isFinite(val)) return '-';
+      return Number(val).toLocaleString('en-US', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+    };
+
+    function calculate() {
+      alertBox.classList.add('hidden');
+      alertBox.textContent = '';
+
+      const sellPrice = parseFloat(sellPriceInput.value);
+      const costPrice = parseFloat(costPriceInput.value);
+      const profit = parseFloat(currentProfitInput.value);
+      const targetCost = parseFloat(targetCostInput.value);
+
+      // If any input is not provided, reset to blank state
+      if (isNaN(sellPrice) || isNaN(costPrice) || isNaN(profit) || isNaN(targetCost)) {
+        impliedSharesEl.textContent = '-';
+        initialCapitalEl.textContent = '-';
+        exactSellSharesEl.textContent = '-';
+        exactDilutedCostEl.textContent = '-';
+        ceilSharesEl.textContent = '-';
+        ceilCostEl.textContent = '-';
+        ceilCashEl.textContent = '-';
+        ceilRemainingEl.textContent = '-';
+        floorSharesEl.textContent = '-';
+        floorCostEl.textContent = '-';
+        floorCashEl.textContent = '-';
+        floorRemainingEl.textContent = '-';
+        statusMessage.textContent = '請輸入完整 4 項數值以獲取試算結果。';
+        return;
+      }
+
+      const profitPerShare = sellPrice - costPrice;
+      if (profitPerShare <= 0) {
+        showError('賣出價格必須大於成本價（每股必須獲利才能透過減持降低攤薄成本）。');
+        return;
+      }
+
+      if (profit <= 0) {
+        showError('目前盈利必須大於 0。');
+        return;
+      }
+
+      if (sellPrice <= targetCost) {
+        showError('賣出價格必須大於目標成本價。');
+        return;
+      }
+
+      if (targetCost >= costPrice) {
+        showError('目標成本價應小於原始持倉成本 (' + costPrice + ')，否則不需進行攤薄。');
+        return;
+      }
+
+      // 1. Calculate implied shares and initial capital
+      const totalShares = profit / profitPerShare;
+      const initialTotalCost = totalShares * costPrice;
+
+      impliedSharesEl.textContent = formatNum(totalShares, 2) + ' 股';
+      initialCapitalEl.textContent = formatMoney(initialTotalCost);
+
+      // 2. Solve for exact sell shares x:
+      // (initialTotalCost - x * sellPrice) / (totalShares - x) = targetCost
+      // x = totalShares * (costPrice - targetCost) / (sellPrice - targetCost)
+      const xExact = totalShares * (costPrice - targetCost) / (sellPrice - targetCost);
+
+      if (xExact > totalShares) {
+        showError('目標成本過低，即使賣出全部持股 (' + formatNum(totalShares, 2) + ' 股) 也無法達成。');
+        return;
+      }
+
+      if (xExact < 0) {
+        showError('目前持倉已優於目標成本，無需賣出。');
+        return;
+      }
+
+      exactSellSharesEl.textContent = formatNum(xExact, 2);
+      exactDilutedCostEl.textContent = formatMoney(targetCost);
+
+      // 3. Integer recommendations
+      const xCeil = Math.min(totalShares, Math.ceil(xExact));
+      const xFloor = Math.max(0, Math.floor(xExact));
+
+      // Ceil calculations
+      const remCeil = totalShares - xCeil;
+      const cashCeil = xCeil * sellPrice;
+      const costCeil = remCeil > 0 ? (initialTotalCost - cashCeil) / remCeil : 0;
+
+      ceilSharesEl.textContent = formatNum(xCeil, 0) + ' 股';
+      ceilCostEl.textContent = formatMoney(costCeil);
+      ceilCashEl.textContent = formatMoney(cashCeil);
+      ceilRemainingEl.textContent = formatNum(remCeil, 0) + ' 股';
+
+      // Floor calculations
+      const remFloor = totalShares - xFloor;
+      const cashFloor = xFloor * sellPrice;
+      const costFloor = remFloor > 0 ? (initialTotalCost - cashFloor) / remFloor : 0;
+
+      floorSharesEl.textContent = formatNum(xFloor, 0) + ' 股';
+      floorCostEl.textContent = formatMoney(costFloor);
+      floorCashEl.textContent = formatMoney(cashFloor);
+      floorRemainingEl.textContent = formatNum(remFloor, 0) + ' 股';
+
+      statusMessage.innerHTML = `<span class="text-emerald-400">⚡ 試算完成：建議賣出 ${formatNum(xCeil, 0)} 股，剩餘 ${formatNum(remCeil, 0)} 股成本將壓至 ${formatMoney(costCeil)}。</span>`;
+    }
+
+    function showError(msg) {
+      alertBox.textContent = '提示：' + msg;
+      alertBox.classList.remove('hidden');
+      statusMessage.textContent = '⚠️ 請修正上方錯誤數值。';
+    }
+
+    [sellPriceInput, costPriceInput, currentProfitInput, targetCostInput].forEach(input => {
+      input.addEventListener('input', calculate);
+    });
+  </script>
+</body>
+</html>
